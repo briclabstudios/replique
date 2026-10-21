@@ -3,7 +3,7 @@
 // jusqu'à une seconde, et les premiers mots d'une réplique seraient perdus. Seul ce qui est
 // entendu pendant mon tour compte.
 
-import { coverage, endReached, isEchoOf } from './match'
+import { coverage, echoDetector, endReached } from './match'
 
 /* Types minimaux : l'API n'est pas dans les définitions DOM standard */
 interface RecognitionResult {
@@ -39,8 +39,8 @@ export type MicState = 'off' | 'starting' | 'ready' | 'unavailable'
 
 interface Turn {
   expected: string
-  /** Réplique lue juste avant par la synthèse vocale : son écho dans le micro est ignoré. */
-  previous: string | null
+  /** Écho de la réplique lue juste avant par la synthèse vocale : ignoré. */
+  isEcho: (heard: string) => boolean
   /** Nombre de résultats définitifs déjà reçus au début du tour : ils ne comptent pas. */
   firstFinal: number
   onProgress?: (transcript: string, ratio: number) => void
@@ -117,7 +117,13 @@ export class SceneListener {
         resolve()
       }
       // Le résultat en cours au début du tour peut déjà contenir mes premiers mots : il est gardé
-      const turn: Turn = { expected, previous, firstFinal: this.finals.length, onProgress, done }
+      const turn: Turn = {
+        expected,
+        isEcho: previous ? echoDetector(previous) : () => false,
+        firstFinal: this.finals.length,
+        onProgress,
+        done,
+      }
       this.turn = turn
       signal.addEventListener('abort', done)
     })
@@ -190,7 +196,7 @@ export class SceneListener {
   /** Ce que j'ai dit pendant mon tour, sans l'écho de la réplique précédente. */
   private heardThisTurn(turn: Turn): string {
     return [...this.finals.slice(turn.firstFinal), ...this.interim]
-      .filter((segment) => !(turn.previous && isEchoOf(turn.previous, segment)))
+      .filter((segment) => !turn.isEcho(segment))
       .join(' ')
       .trim()
   }

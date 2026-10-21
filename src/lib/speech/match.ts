@@ -32,14 +32,23 @@ export function coverage(expected: string, heard: string): number {
 }
 
 /**
- * Ce morceau entendu est-il l'écho d'une réplique lue par la synthèse vocale ?
- * Sur téléphone, le micro capte le haut-parleur : on reconnaît alors surtout les mots de cette
- * réplique, dans l'ordre. Un mot isolé n'est jamais considéré comme un écho.
+ * Détecteur d'écho d'une réplique lue par la synthèse vocale : sur téléphone, le micro capte le
+ * haut-parleur, et l'on reconnaît alors surtout les mots de cette réplique, dans l'ordre.
+ * Un mot isolé n'est jamais considéré comme un écho. Les mots de la réplique sont préparés une
+ * fois, et le verdict de chaque morceau mémorisé : appelé à chaque mot reconnu, il reste léger.
  */
-export function isEchoOf(spoken: string, heard: string): boolean {
-  const h = words(heard)
-  if (h.length < 2) return false
-  return lcs(h, words(spoken)) / h.length >= 0.7
+export function echoDetector(spoken: string): (heard: string) => boolean {
+  const s = words(spoken)
+  const verdicts = new Map<string, boolean>()
+  return (heard) => {
+    let echo = verdicts.get(heard)
+    if (echo === undefined) {
+      const h = words(heard)
+      echo = h.length >= 2 && lcs(h, s) / h.length >= 0.7
+      verdicts.set(heard, echo)
+    }
+    return echo
+  }
 }
 
 /** Les derniers mots de la réplique ont-ils été prononcés ? */

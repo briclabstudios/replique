@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverage, endReached, isEchoOf, words } from './match'
+import { coverage, echoDetector, endReached, words } from './match'
 
 describe('match', () => {
   it('normalise accents, apostrophes et ponctuation', () => {
@@ -13,11 +13,11 @@ describe('match', () => {
   })
 
   it('reconnaît l’écho de la réplique précédente', () => {
-    const previous = 'Hé quoi ! charmante Élise, vous devenez mélancolique ?'
-    expect(isEchoOf(previous, 'charmante Élise vous devenez')).toBe(true)
-    expect(isEchoOf(previous, 'non Valère je ne puis me repentir')).toBe(false)
+    const isEcho = echoDetector('Hé quoi ! charmante Élise, vous devenez mélancolique ?')
+    expect(isEcho('charmante Élise vous devenez')).toBe(true)
+    expect(isEcho('non Valère je ne puis me repentir')).toBe(false)
     // Un mot isolé (« Élise ») peut être le début de ma réplique : jamais un écho
-    expect(isEchoOf(previous, 'Élise')).toBe(false)
+    expect(isEcho('Élise')).toBe(false)
   })
 
   it('détecte la fin de la réplique', () => {
