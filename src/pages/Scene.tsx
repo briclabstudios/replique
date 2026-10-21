@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, Check, Lightbulb, Mic, MicOff, Pause, Pencil, Play as PlayIcon, Plus, RotateCcw, SkipForward, Trash2,
 } from 'lucide-react'
-import { deleteLine, getCharacters, getScene, getStructure, insertLine, updateLine } from '../lib/api'
+import { deleteLine, getCharacters, getPlay, getScene, getStructure, insertLine, updateLine } from '../lib/api'
 import { getMyRole, getProgress, setSceneProgress } from '../lib/storage'
 import { characterColor, toRoman } from '../lib/format'
 import { isRecognitionSupported } from '../lib/speech/listener'
@@ -255,6 +255,7 @@ function Editor({ playId, sceneId, lines, characters, onLinesChange }: {
 
 export default function ScenePage() {
   const { playId = '', sceneId = '' } = useParams()
+  const play = useLoader(() => getPlay(playId), [playId])
   const scene = useLoader(() => getScene(sceneId), [sceneId])
   const characters = useLoader(() => getCharacters(playId), [playId])
   const structure = useLoader(() => getStructure(playId), [playId])
@@ -278,10 +279,11 @@ export default function ScenePage() {
   return (
     <main className="container scene-page">
       <Link to={`/pieces/${playId}`} className="back">
-        <ArrowLeft size={16} aria-hidden /> Sommaire
+        <ArrowLeft size={16} aria-hidden /> Retour au sommaire de la pièce
       </Link>
       <section className="card scene-head">
         <div>
+          {play.data && <p className="play-title">{play.data.title}</p>}
           <p className="eyebrow">Acte {toRoman(act.number)}</p>
           <h1>
             Scène {scene.data.scene.number}
