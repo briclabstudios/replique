@@ -129,14 +129,14 @@ export default function Home() {
 
   return (
     <main className="container">
-      <ImportForm />
       <h1 className="section-title">Mes pièces</h1>
       {loading && !plays && <p className="muted">Chargement…</p>}
       {error && <p className="error">{error}</p>}
-      {plays?.length === 0 && <p className="muted">Aucune pièce pour l’instant : importez votre premier texte.</p>}
+      {plays?.length === 0 && <p className="muted">Aucune pièce pour l’instant : importez votre premier texte ci-dessous.</p>}
       <div className="grid">
         {plays?.map((play) => <PlayTile key={play.id} play={play} onDelete={() => remove(play)} />)}
       </div>
+      <ImportForm />
     </main>
   )
 }
