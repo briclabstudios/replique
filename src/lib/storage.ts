@@ -49,6 +49,15 @@ export function clearPlayData(playId: string) {
   write(`progress:${playId}`, null)
 }
 
+/** Voix du navigateur choisie pour un personnage : les voix installées diffèrent d'un appareil à l'autre. */
+export function getCharacterVoice(characterId: string): string | null {
+  return read<string | null>(`voice:${characterId}`, null)
+}
+
+export function setCharacterVoice(characterId: string, voiceURI: string | null) {
+  write(`voice:${characterId}`, voiceURI)
+}
+
 export function getDeviceSetting<T>(key: string, fallback: T): T {
   return read<T>(`setting:${key}`, fallback)
 }

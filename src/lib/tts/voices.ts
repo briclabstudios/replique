@@ -1,3 +1,4 @@
+import { getCharacterVoice } from '../storage'
 import type { Character, Gender } from '../types'
 
 /** Tons proposés pour chaque personnage : réglage débit/hauteur (navigateur) et consigne (OpenAI). */
@@ -58,12 +59,17 @@ export function frenchVoices(): SpeechSynthesisVoice[] {
 }
 
 /**
- * Choisit une voix système pour un personnage : même genre si possible, et des voix
- * différentes d'un personnage à l'autre. Quand il y a peu de voix, la hauteur varie.
+ * Choisit une voix système pour un personnage : celle choisie sur cet appareil si elle existe,
+ * sinon même genre si possible, et des voix différentes d'un personnage à l'autre.
+ * Quand il y a peu de voix, la hauteur varie.
  */
-export function browserVoice(character: Pick<Character, 'gender' | 'position' | 'tone'>) {
+export function browserVoice(character: Pick<Character, 'id' | 'gender' | 'position' | 'tone'>) {
   const voices = frenchVoices()
   const tone = toneOf(character)
+  const preferred = getCharacterVoice(character.id)
+  const chosen = preferred ? speechSynthesis.getVoices().find((v) => v.voiceURI === preferred) : undefined
+  if (chosen) return { voice: chosen, rate: tone.rate, pitch: tone.pitch }
+
   const sameGender = voices.filter((v) => voiceGender(v) === character.gender)
   const pool = sameGender.length > 0 ? sameGender : voices
   const voice = pool[character.position % Math.max(pool.length, 1)] ?? null

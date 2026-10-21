@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Check, Copy, Star, Trash2, Volume2 } from 'lucide-react'
 import {
@@ -10,9 +10,9 @@ import {
   updatePlay,
   type CharacterWithCount,
 } from '../lib/api'
-import { getMyRole, setMyRole } from '../lib/storage'
+import { getCharacterVoice, getMyRole, setCharacterVoice, setMyRole } from '../lib/storage'
 import { characterColor, plural } from '../lib/format'
-import { TONES } from '../lib/tts/voices'
+import { frenchVoices, TONES, voicesReady } from '../lib/tts/voices'
 import { useSettings } from '../context/SettingsContext'
 import { useLoader } from '../hooks/useLoader'
 import type { Character, Gender } from '../lib/types'
@@ -26,6 +26,8 @@ const GENDERS: { value: Gender; label: string }[] = [
 interface CardProps {
   character: CharacterWithCount
   others: CharacterWithCount[]
+  /** Voix françaises installées sur cet appareil. */
+  voices: SpeechSynthesisVoice[]
   isMine: boolean
   onToggleMine: () => void
   onChange: (patch: Partial<Character>) => void
@@ -34,9 +36,16 @@ interface CardProps {
   onDelete: () => void
 }
 
-function CharacterCard({ character, others, isMine, onToggleMine, onChange, onSave, onMerge, onDelete }: CardProps) {
-  const { engine } = useSettings()
+function CharacterCard({ character, others, voices, isMine, onToggleMine, onChange, onSave, onMerge, onDelete }: CardProps) {
+  const { engine, tts } = useSettings()
   const [listening, setListening] = useState(false)
+  const [voiceURI, setVoiceURI] = useState(() => getCharacterVoice(character.id))
+  const savedVoiceMissing = voiceURI !== null && !voices.some((v) => v.voiceURI === voiceURI)
+
+  const chooseVoice = (uri: string) => {
+    setCharacterVoice(character.id, uri || null)
+    setVoiceURI(uri || null)
+  }
   const lineCount = character.lines[0]?.count ?? 0
 
   const preview = async () => {
@@ -86,6 +95,21 @@ function CharacterCard({ character, others, isMine, onToggleMine, onChange, onSa
             </option>
           ))}
         </select>
+        {tts.provider === 'browser' && (
+          <select
+            value={savedVoiceMissing ? '' : voiceURI ?? ''}
+            onChange={(e) => chooseVoice(e.target.value)}
+            aria-label="Voix du navigateur"
+            disabled={voices.length === 0}
+          >
+            <option value="">{voices.length === 0 ? 'Aucune voix française' : 'Voix : automatique'}</option>
+            {voices.map((v) => (
+              <option key={v.voiceURI} value={v.voiceURI}>
+                Voix : {v.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <textarea
@@ -135,6 +159,11 @@ export default function Characters() {
   const [myRole, setMyRoleState] = useState(() => getMyRole(playId))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+
+  useEffect(() => {
+    voicesReady().then(() => setVoices(frenchVoices()))
+  }, [])
 
   const list = characters.data ?? []
 
@@ -227,6 +256,7 @@ export default function Characters() {
             key={c.id}
             character={c}
             others={list.filter((o) => o.id !== c.id)}
+            voices={voices}
             isMine={myRole === c.id}
             onToggleMine={() => toggleMine(c.id)}
             onChange={(patch) => patchLocal(c.id, patch)}
