@@ -24,6 +24,10 @@ class FakeRecognition {
     this.results.push({ isFinal, 0: { transcript } })
     this.onresult?.({ resultIndex: index, results: this.results })
   }
+  /** Comme Chrome sur Android : renvoie toute la liste, résultats définitifs compris. */
+  resend() {
+    this.onresult?.({ resultIndex: 0, results: this.results })
+  }
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 0))
@@ -99,6 +103,44 @@ describe('SceneListener', () => {
     await settle()
     expect(transcripts.at(-1)).toBe('non Valère je ne puis me repentir')
     expect(done).toBe(true)
+  })
+
+  it('n’écrit pas deux fois un résultat renvoyé par Android', async () => {
+    listener.start()
+    const mic = FakeRecognition.instances[0]
+    const transcripts: string[] = []
+    listener.waitForLine('Je ne puis me repentir de tout', null, new AbortController().signal, (heard) =>
+      transcripts.push(heard),
+    )
+    mic.say('je ne puis')
+    mic.resend()
+    mic.resend()
+    mic.say('me repentir', false)
+    expect(transcripts.at(-1)).toBe('je ne puis me repentir')
+  })
+
+  it('garde seulement le plus complet des résultats cumulatifs d’Android', async () => {
+    listener.start()
+    const mic = FakeRecognition.instances[0]
+    const transcripts: string[] = []
+    listener.waitForLine('Je ne puis me repentir de tout', null, new AbortController().signal, (heard) =>
+      transcripts.push(heard),
+    )
+    mic.say('je ne')
+    mic.say('je ne puis')
+    mic.say('je ne puis me repentir', false)
+    expect(transcripts.at(-1)).toBe('je ne puis me repentir')
+  })
+
+  it('ne recompte pas un résultat d’avant mon tour renvoyé ensuite', async () => {
+    listener.start()
+    const mic = FakeRecognition.instances[0]
+    mic.say('une phrase dite avant mon tour')
+    const transcripts: string[] = []
+    listener.waitForLine('Ma réplique à moi', null, new AbortController().signal, (heard) => transcripts.push(heard))
+    mic.resend()
+    mic.say('ma réplique', false)
+    expect(transcripts.at(-1)).toBe('ma réplique')
   })
 
   it('relance l’écoute quand le navigateur l’arrête', async () => {

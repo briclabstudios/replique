@@ -51,6 +51,25 @@ export function echoDetector(spoken: string): (heard: string) => boolean {
   }
 }
 
+/**
+ * Fusionne les morceaux reconnus qui se répètent. Chrome sur Android reprend souvent le début
+ * de la phrase dans chaque nouveau résultat (« je ne » puis « je ne puis ») : on ne garde que
+ * le plus complet. Les répétitions exactes ou plus courtes sont écartées.
+ */
+export function mergeRepeats(segments: string[]): string[] {
+  const kept: string[] = []
+  let lastWords = ''
+  for (const segment of segments) {
+    const w = words(segment).join(' ')
+    if (!w) continue
+    if (lastWords && (w === lastWords || lastWords.startsWith(`${w} `))) continue
+    if (lastWords && w.startsWith(`${lastWords} `)) kept[kept.length - 1] = segment
+    else kept.push(segment)
+    lastWords = w
+  }
+  return kept
+}
+
 /** Les derniers mots de la réplique ont-ils été prononcés ? */
 export function endReached(expected: string, heard: string, tail = 2): boolean {
   const e = words(expected).slice(-tail)

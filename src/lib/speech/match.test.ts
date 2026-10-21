@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverage, echoDetector, endReached, words } from './match'
+import { coverage, echoDetector, endReached, mergeRepeats, words } from './match'
 
 describe('match', () => {
   it('normalise accents, apostrophes et ponctuation', () => {
@@ -18,6 +18,14 @@ describe('match', () => {
     expect(isEcho('non Valère je ne puis me repentir')).toBe(false)
     // Un mot isolé (« Élise ») peut être le début de ma réplique : jamais un écho
     expect(isEcho('Élise')).toBe(false)
+  })
+
+  it('fusionne les répétitions des résultats Android', () => {
+    expect(mergeRepeats(['je ne', 'je ne puis', 'je ne puis me repentir'])).toEqual(['je ne puis me repentir'])
+    expect(mergeRepeats(['je ne puis', 'je ne puis', 'me repentir'])).toEqual(['je ne puis', 'me repentir'])
+    expect(mergeRepeats(['Je ne puis !', 'je ne'])).toEqual(['Je ne puis !'])
+    // « je » puis « jeudi » : un mot qui commence pareil n'est pas une répétition
+    expect(mergeRepeats(['je', 'jeudi soir'])).toEqual(['je', 'jeudi soir'])
   })
 
   it('détecte la fin de la réplique', () => {

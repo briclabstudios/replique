@@ -3,7 +3,7 @@
 // jusqu'à une seconde, et les premiers mots d'une réplique seraient perdus. Seul ce qui est
 // entendu pendant mon tour compte.
 
-import { coverage, echoDetector, endReached } from './match'
+import { coverage, echoDetector, endReached, mergeRepeats } from './match'
 
 /* Types minimaux : l'API n'est pas dans les définitions DOM standard */
 interface RecognitionResult {
@@ -41,8 +41,6 @@ interface Turn {
   expected: string
   /** Écho de la réplique lue juste avant par la synthèse vocale : ignoré. */
   isEcho: (heard: string) => boolean
-  /** Nombre de résultats définitifs déjà reçus au début du tour : ils ne comptent pas. */
-  firstFinal: number
   onProgress?: (transcript: string, ratio: number) => void
   done: () => void
   silenceTimer?: ReturnType<typeof setTimeout>
@@ -59,9 +57,15 @@ const QUICK_RESTART_MS = 1000
 export class SceneListener {
   private recognition: Recognition | null = null
   private active = false
-  private finals: string[] = []
-  /** Résultats provisoires en cours, un par segment reconnu. */
-  private interim: string[] = []
+  /**
+   * Résultats reconnus pendant le tour en cours, rangés par « session:position » dans l'ordre
+   * d'arrivée. Chrome sur Android renvoie plusieurs fois un même résultat : rangé à sa position,
+   * il remplace le précédent au lieu de s'ajouter.
+   */
+  private segments = new Map<string, { text: string; final: boolean }>()
+  /** Résultats définitifs avant le début de mon tour : ils ne comptent plus, même renvoyés. */
+  private ignored = new Set<string>()
+  private session = 0
   private turn: Turn | null = null
   private quickRestarts = 0
   private lastStart = 0
@@ -94,6 +98,9 @@ export class SceneListener {
       // déjà arrêtée
     }
     this.recognition = null
+    // Les sessions suivantes ont de nouveaux numéros : rien de l'ancienne ne peut revenir
+    this.segments.clear()
+    this.ignored.clear()
     this.onStateChange('off')
   }
 
@@ -116,11 +123,16 @@ export class SceneListener {
         if (this.turn === turn) this.endTurn()
         resolve()
       }
-      // Le résultat en cours au début du tour peut déjà contenir mes premiers mots : il est gardé
+      // Les résultats définitifs sont écartés ; celui en cours peut déjà contenir mes premiers mots
+      for (const [key, segment] of this.segments) {
+        if (segment.final) {
+          this.ignored.add(key)
+          this.segments.delete(key)
+        }
+      }
       const turn: Turn = {
         expected,
         isEcho: previous ? echoDetector(previous) : () => false,
-        firstFinal: this.finals.length,
         onProgress,
         done,
       }
@@ -154,7 +166,7 @@ export class SceneListener {
 
     const recognition = new Ctor()
     this.recognition = recognition
-    this.interim = []
+    const session = ++this.session
     recognition.lang = 'fr-FR'
     recognition.continuous = true
     recognition.interimResults = true
@@ -165,13 +177,13 @@ export class SceneListener {
     }
     recognition.onresult = (e) => {
       if (this.recognition !== recognition) return
-      const interim: string[] = []
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      // Toute la liste est relue : sur Android, resultIndex n'est pas fiable
+      for (let i = 0; i < e.results.length; i++) {
+        const key = `${session}:${i}`
+        if (this.ignored.has(key)) continue
         const r = e.results[i]
-        if (r.isFinal) this.finals.push(r[0].transcript)
-        else interim.push(r[0].transcript)
+        this.segments.set(key, { text: r[0].transcript, final: r.isFinal })
       }
-      this.interim = interim
       this.check()
     }
     recognition.onerror = (e) => {
@@ -182,7 +194,10 @@ export class SceneListener {
     // Les navigateurs arrêtent l'écoute après un long silence : on relance
     recognition.onend = () => {
       if (this.recognition !== recognition) return
-      this.interim = []
+      // Les résultats provisoires d'une session terminée ne deviendront jamais définitifs
+      for (const [key, segment] of this.segments) {
+        if (!segment.final && key.startsWith(`${session}:`)) this.segments.delete(key)
+      }
       if (this.active) setTimeout(() => this.launch(), 150)
     }
 
@@ -193,12 +208,10 @@ export class SceneListener {
     }
   }
 
-  /** Ce que j'ai dit pendant mon tour, sans l'écho de la réplique précédente. */
+  /** Ce que j'ai dit pendant mon tour, sans écho de la réplique précédente ni répétition. */
   private heardThisTurn(turn: Turn): string {
-    return [...this.finals.slice(turn.firstFinal), ...this.interim]
-      .filter((segment) => !turn.isEcho(segment))
-      .join(' ')
-      .trim()
+    const texts = [...this.segments.values()].map((s) => s.text).filter((text) => !turn.isEcho(text))
+    return mergeRepeats(texts).join(' ').trim()
   }
 
   private check() {
