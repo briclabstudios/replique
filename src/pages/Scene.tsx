@@ -78,7 +78,8 @@ function Player({ playId, sceneId, lines, characters, myRoleId, nextSceneId }: P
               <span className="speaker" style={{ color: characterColor(character?.position ?? 0) }}>
                 {character?.name ?? '?'}
               </span>
-              {mine ? (
+              {/* Mes répliques restent masquées jusqu'à ce que je les aie dites */}
+              {mine && state !== 'past' ? (
                 <p className="hidden-line">
                   {hint > 0 ? hintText(line.text, hint) : state === 'current' ? 'À vous !' : '• • •'}
                 </p>
