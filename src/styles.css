@@ -224,6 +224,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 
 /* Sommaire */
 .summary-head, .scene-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+/* En-tête de scène toujours visible, juste sous la barre du haut */
+.scene-head {
+  position: sticky;
+  top: var(--topbar-height, 56px);
+  z-index: 4;
+  padding: 10px 16px;
+}
+.scene-head h1 { font-size: 1.3rem; margin: 0; }
+/* Une réplique ramenée à l'écran (focus en édition) ne passe pas sous l'en-tête */
+.script .line { scroll-margin-top: calc(var(--topbar-height, 56px) + 140px); }
 .play-title { margin: 0 0 2px; font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; font-size: 1.05rem; font-weight: 600; }
 .act { margin-top: 24px; }
 .scene-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }

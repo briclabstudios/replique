@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react'
 import { HashRouter, Link, Route, Routes } from 'react-router-dom'
 import { Drama, Settings } from 'lucide-react'
 import { SettingsProvider } from './context/SettingsContext'
@@ -22,6 +23,33 @@ function MissingConfig() {
   )
 }
 
+/** Barre du haut ; sa hauteur (variable avec l'encoche des téléphones) est exposée en --topbar-height. */
+function TopBar() {
+  const ref = useRef<HTMLElement>(null)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const update = () => document.documentElement.style.setProperty('--topbar-height', `${el.offsetHeight}px`)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <header ref={ref} className="topbar">
+      <Link to="/" className="brand">
+        <Drama size={24} aria-hidden />
+        <span>Réplique</span>
+      </Link>
+      <Link to="/admin" className="icon-button" aria-label="Administration" title="Administration">
+        <Settings size={20} />
+      </Link>
+    </header>
+  )
+}
+
 export default function App() {
   if (!isSupabaseConfigured) return <MissingConfig />
 
@@ -29,15 +57,7 @@ export default function App() {
   return (
     <HashRouter>
       <SettingsProvider>
-        <header className="topbar">
-          <Link to="/" className="brand">
-            <Drama size={24} aria-hidden />
-            <span>Réplique</span>
-          </Link>
-          <Link to="/admin" className="icon-button" aria-label="Administration" title="Administration">
-            <Settings size={20} />
-          </Link>
-        </header>
+        <TopBar />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pieces/:playId" element={<Summary />} />
