@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Play as PlayIcon, Users } from 'lucide-react'
 import { getPlay, getStructure } from '../lib/api'
-import { getProgress } from '../lib/storage'
 import { toRoman } from '../lib/format'
 import { useLoader } from '../hooks/useLoader'
 
@@ -10,13 +8,6 @@ export default function Summary() {
   const { playId = '' } = useParams()
   const play = useLoader(() => getPlay(playId), [playId])
   const structure = useLoader(() => getStructure(playId), [playId])
-  const [progress, setProgress] = useState(() => getProgress(playId))
-
-  useEffect(() => {
-    const refresh = () => setProgress(getProgress(playId))
-    window.addEventListener('replique:storage', refresh)
-    return () => window.removeEventListener('replique:storage', refresh)
-  }, [playId])
 
   const error = play.error ?? structure.error
   if (error) return <main className="container"><p className="error">{error}</p></main>
@@ -48,27 +39,23 @@ export default function Summary() {
           <ul className="scene-list">
             {scenes
               .filter((s) => s.act_id === act.id)
-              .map((scene) => {
-                const inProgress = progress[scene.id] !== undefined
-                return (
-                  <li key={scene.id} className={inProgress ? 'scene-row in-progress' : 'scene-row'}>
-                    <Link to={`/pieces/${playId}/scenes/${scene.id}`} className="scene-link">
-                      <span>
-                        <strong>Scène {scene.number}</strong>
-                        {scene.title && <span className="muted"> — {scene.title}</span>}
-                      </span>
-                      {inProgress && <span className="tag">En cours</span>}
-                    </Link>
-                    <Link
-                      to={`/pieces/${playId}/scenes/${scene.id}`}
-                      className="icon-button play"
-                      aria-label={`Répéter la scène ${scene.number} de l’acte ${act.number}`}
-                    >
-                      <PlayIcon size={20} fill="currentColor" />
-                    </Link>
-                  </li>
-                )
-              })}
+              .map((scene) => (
+                <li key={scene.id} className="scene-row">
+                  <Link to={`/pieces/${playId}/scenes/${scene.id}`} className="scene-link">
+                    <span>
+                      <strong>Scène {scene.number}</strong>
+                      {scene.title && <span className="muted"> — {scene.title}</span>}
+                    </span>
+                  </Link>
+                  <Link
+                    to={`/pieces/${playId}/scenes/${scene.id}`}
+                    className="icon-button play"
+                    aria-label={`Répéter la scène ${scene.number} de l’acte ${act.number}`}
+                  >
+                    <PlayIcon size={20} fill="currentColor" />
+                  </Link>
+                </li>
+              ))}
           </ul>
         </section>
       ))}

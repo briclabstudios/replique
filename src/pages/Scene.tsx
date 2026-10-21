@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, Check, Lightbulb, Mic, MicOff, Pause, Pencil, Play as PlayIcon, Plus, RotateCcw, SkipForward, Trash2,
+  ArrowLeft, Check, Lightbulb, Mic, MicOff, Pause, Pencil, Play as PlayIcon, Plus, RotateCcw, SkipForward, Trash2, UserCheck,
 } from 'lucide-react'
 import { deleteLine, getCharacters, getPlay, getScene, getStructure, insertLine, updateLine } from '../lib/api'
 import { getMyRole, getProgress, setSceneProgress } from '../lib/storage'
@@ -11,7 +11,6 @@ import { useSettings } from '../context/SettingsContext'
 import { useLoader } from '../hooks/useLoader'
 import { useRehearsal } from '../hooks/useRehearsal'
 import type { Character, Line } from '../lib/types'
-import { RoleSelect } from '../components/RoleSelect'
 
 const HINT_STEP = 3
 
@@ -259,7 +258,8 @@ export default function ScenePage() {
   const scene = useLoader(() => getScene(sceneId), [sceneId])
   const characters = useLoader(() => getCharacters(playId), [playId])
   const structure = useLoader(() => getStructure(playId), [playId])
-  const [myRole, setMyRoleState] = useState(() => getMyRole(playId))
+  // Le rôle se choisit sur l'écran Personnages ; ici il est seulement lu
+  const [myRole] = useState(() => getMyRole(playId))
   const [editing, setEditing] = useState(false)
 
   const byId = useMemo(() => new Map((characters.data ?? []).map((c) => [c.id, c as Character])), [characters.data])
@@ -274,6 +274,7 @@ export default function ScenePage() {
   if (!scene.data || !characters.data) return <main className="container"><p className="muted">Chargement…</p></main>
 
   const { act, lines } = scene.data
+  const myRoleName = myRole ? byId.get(myRole)?.name ?? null : null
   const setLines = (next: Line[]) => scene.setData({ ...scene.data!, lines: next })
 
   return (
@@ -291,8 +292,10 @@ export default function ScenePage() {
           </h1>
         </div>
         <div className="row wrap">
-          {!editing && (
-            <RoleSelect playId={playId} characters={characters.data} value={myRole} onChange={setMyRoleState} />
+          {!editing && myRoleName && (
+            <span className="muted">
+              Vous jouez <strong>{myRoleName}</strong>
+            </span>
           )}
           <button
             className={editing ? 'button primary' : 'button'}
@@ -307,6 +310,12 @@ export default function ScenePage() {
         </div>
       </section>
 
+      {!editing && !myRoleName && (
+        <p className="notice">
+          <UserCheck size={16} aria-hidden /> Aucun rôle choisi : toutes les répliques sont lues.{' '}
+          <Link to={`/pieces/${playId}/personnages`}>Choisir mon rôle</Link>
+        </p>
+      )}
       {lines.length === 0 && <p className="muted">Cette scène ne contient aucune réplique.</p>}
 
       {editing ? (

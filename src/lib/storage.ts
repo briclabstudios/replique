@@ -17,9 +17,8 @@ function write(key: string, value: unknown) {
     if (value === null || value === undefined) localStorage.removeItem(PREFIX + key)
     else localStorage.setItem(PREFIX + key, JSON.stringify(value))
   } catch {
-    // stockage indisponible : la valeur reste en mémoire pour la session
+    // stockage indisponible (navigation privée) : la valeur n'est pas mémorisée
   }
-  window.dispatchEvent(new CustomEvent('replique:storage', { detail: key }))
 }
 
 export function getMyRole(playId: string): string | null {
