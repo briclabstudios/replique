@@ -305,7 +305,7 @@ export default function ScenePage() {
               setEditing(!editing)
             }}
           >
-            {editing ? <><Check size={16} aria-hidden /> Terminer</> : <><Pencil size={16} aria-hidden /> Éditer</>}
+            {editing ? <><Check size={16} aria-hidden /> Valider les modifications</> : <><Pencil size={16} aria-hidden /> Éditer</>}
           </button>
         </div>
       </section>
