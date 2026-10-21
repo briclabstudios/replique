@@ -267,10 +267,11 @@ export default function Characters() {
         ))}
       </ul>
 
+      {/* Toujours visible en bas de l'écran, sans devoir faire défiler toute la liste */}
       <div className="footer-actions">
-        {!myRole && <p className="muted">Astuce : choisissez votre rôle avant de répéter.</p>}
+        {!myRole && <p className="muted small">Astuce : choisissez votre rôle avant de répéter.</p>}
         <button className="button primary large" onClick={confirmAll} disabled={saving}>
-          <Check size={20} aria-hidden /> Confirmer et aller au sommaire
+          <Check size={20} aria-hidden /> Valider les modifications
         </button>
       </div>
     </main>

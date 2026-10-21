@@ -1,45 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Play as PlayIcon, Users } from 'lucide-react'
-import { getCharacters, getPlay, getStructure } from '../lib/api'
-import { getMyRole, getProgress, setMyRole } from '../lib/storage'
+import { getPlay, getStructure } from '../lib/api'
+import { getProgress } from '../lib/storage'
 import { toRoman } from '../lib/format'
 import { useLoader } from '../hooks/useLoader'
-
-export function RoleSelect({ playId, characters, value, onChange }: {
-  playId: string
-  characters: { id: string; name: string }[]
-  value: string | null
-  onChange: (id: string | null) => void
-}) {
-  return (
-    <label className="role-select">
-      Mon rôle
-      <select
-        value={value ?? ''}
-        onChange={(e) => {
-          const id = e.target.value || null
-          setMyRole(playId, id)
-          onChange(id)
-        }}
-      >
-        <option value="">— Aucun (tout est lu) —</option>
-        {characters.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
 
 export default function Summary() {
   const { playId = '' } = useParams()
   const play = useLoader(() => getPlay(playId), [playId])
   const structure = useLoader(() => getStructure(playId), [playId])
-  const characters = useLoader(() => getCharacters(playId), [playId])
-  const [myRole, setMyRoleState] = useState(() => getMyRole(playId))
   const [progress, setProgress] = useState(() => getProgress(playId))
 
   useEffect(() => {
@@ -48,9 +18,9 @@ export default function Summary() {
     return () => window.removeEventListener('replique:storage', refresh)
   }, [playId])
 
-  const error = play.error ?? structure.error ?? characters.error
+  const error = play.error ?? structure.error
   if (error) return <main className="container"><p className="error">{error}</p></main>
-  if (!play.data || !structure.data || !characters.data) return <main className="container"><p className="muted">Chargement…</p></main>
+  if (!play.data || !structure.data) return <main className="container"><p className="muted">Chargement…</p></main>
 
   const { acts, scenes } = structure.data
 
@@ -64,12 +34,9 @@ export default function Summary() {
           <h1>{play.data.title}</h1>
           {play.data.author && <p className="muted">{play.data.author}</p>}
         </div>
-        <div className="row wrap">
-          <RoleSelect playId={playId} characters={characters.data} value={myRole} onChange={setMyRoleState} />
-          <Link to={`/pieces/${playId}/personnages`} className="button">
-            <Users size={16} aria-hidden /> Personnages
-          </Link>
-        </div>
+        <Link to={`/pieces/${playId}/personnages`} className="button">
+          <Users size={16} aria-hidden /> Personnages
+        </Link>
       </section>
 
       {acts.map((act) => (

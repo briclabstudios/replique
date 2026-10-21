@@ -11,7 +11,7 @@ import { useSettings } from '../context/SettingsContext'
 import { useLoader } from '../hooks/useLoader'
 import { useRehearsal } from '../hooks/useRehearsal'
 import type { Character, Line } from '../lib/types'
-import { RoleSelect } from './Summary'
+import { RoleSelect } from '../components/RoleSelect'
 
 const HINT_STEP = 3
 
