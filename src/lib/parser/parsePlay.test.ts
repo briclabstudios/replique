@@ -115,6 +115,38 @@ describe('parsePlay', () => {
   })
 })
 
+describe('parsePlay — distribution « Liste des personnages : »', () => {
+  const play = parsePlay([
+    'Liste des personnages :',
+    'JOHN-EMERY ROCKEFELLER : 70 ans, dur à cuire.',
+    'CAROLINE ROCKEFELLER : sa femme.',
+    'ŒIL-DE-LYNX : chef des Comanches.',
+    'ACTE PREMIER',
+    'Scène I',
+    'JOHN-EMERY. - Silence !',
+    'CAROLINE. Personne t’empêche.',
+    'JOHN -EMERY. - Amen.',
+    'OEIL-DE-LYNX. Hugh.',
+    'ŒIL-DE-LYNX. Hugh !',
+    'RIDEAU',
+  ], 'Sassafras')
+
+  it('rattache les noms courts du texte aux noms complets de la distribution', () => {
+    expect(play.characters.map((c) => [c.name, c.description])).toEqual([
+      ['JOHN-EMERY', '70 ans, dur à cuire.'],
+      ['CAROLINE', 'sa femme.'],
+      ['ŒIL-DE-LYNX', 'chef des Comanches.'],
+    ])
+    expect(play.characters[1].gender).toBe('female')
+  })
+
+  it('fusionne Œ/OE et les espaces autour des traits d’union, ignore « RIDEAU »', () => {
+    expect(play.acts[0].scenes[0].lines.map((l) => l.character)).toEqual([
+      'JOHN-EMERY', 'CAROLINE', 'JOHN-EMERY', 'ŒIL-DE-LYNX', 'ŒIL-DE-LYNX',
+    ])
+  })
+})
+
 describe('guessGender', () => {
   it('se base sur la description', () => {
     expect(guessGender('ÉLISE', 'fille d’Harpagon')).toBe('female')

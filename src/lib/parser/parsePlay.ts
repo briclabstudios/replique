@@ -44,7 +44,7 @@ const ORDINALS: Record<string, number> = {
 const NUMBER = '([IVXLCDM]+|\\d+|[A-Za-zÀ-ÿ]+)'
 const ACT_RE = new RegExp(`^ACTE\\s+${NUMBER}\\b\\.?\\s*[-–—:.]?\\s*(.*)$`, 'i')
 const SCENE_RE = new RegExp(`^SC[ÈE]NE\\s+${NUMBER}\\b\\.?\\s*[-–—:.]?\\s*(.*)$`, 'i')
-const CAST_HEADING_RE = /^(les\s+)?(personnages|distribution|dramatis\s+personae)\s*[.:]?$/i
+const CAST_HEADING_RE = /^(liste\s+des\s+|les\s+)?(personnages|distribution|dramatis\s+personae)\s*[.:]?$/i
 const AUTHOR_RE = /^(?:de|par)\s+(.{2,80})$/i
 
 // Abréviations en majuscules qui font partie d'un nom (« M. JOURDAIN »)
@@ -56,8 +56,16 @@ export function stripAccents(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
+/** Clé de comparaison des noms : sans accents ni ligatures, espaces autour des traits d'union ignorés. */
 function nameKey(name: string): string {
-  return stripAccents(name).toUpperCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim()
+  return stripAccents(name)
+    .toUpperCase()
+    .replace(/Œ/g, 'OE')
+    .replace(/Æ/g, 'AE')
+    .replace(/[’']/g, "'")
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function romanToInt(roman: string): number | null {
@@ -193,10 +201,16 @@ export function parsePlay(paragraphs: string[], docTitle: string | null = null):
     const sp = splitSpeaker(p)
     if (sp) counts.set(nameKey(sp.name), (counts.get(nameKey(sp.name)) ?? 0) + 1)
   }
+  /** Entrée de la distribution d'un nom du texte : identique, ou plus complète (« JOHN-EMERY » → « JOHN-EMERY ROCKEFELLER »). */
+  const castKeyFor = (key: string): string | null => {
+    if (cast.has(key)) return key
+    const longer = [...cast.keys()].filter((ck) => ck.startsWith(`${key} `))
+    return longer.length === 1 ? longer[0] : null
+  }
   const isSpeaker = (name: string) => {
     if (cast.size === 0) return true
     const key = nameKey(name)
-    return cast.has(key) || (counts.get(key) ?? 0) >= 2
+    return castKeyFor(key) !== null || (counts.get(key) ?? 0) >= 2
   }
 
   // 3) Second passage : actes, scènes et répliques
@@ -270,21 +284,44 @@ export function parsePlay(paragraphs: string[], docTitle: string | null = null):
   flush()
 
   // 4) Personnages : ordre de la distribution, puis ordre d'apparition.
-  // Les variantes d'accentuation (CLEANTE / CLÉANTE) sont fusionnées sous l'orthographe la plus fréquente.
-  const displayName = (key: string) => {
-    const castName = cast.get(key)?.name
+  // Les variantes (CLEANTE / CLÉANTE, ŒIL / OEIL) sont fusionnées sous l'orthographe la plus fréquente,
+  // et un nom du texte plus court que celui de la distribution lui est rattaché.
+  const lineCount = new Map<string, number>()
+  for (const a of acts) {
+    for (const s of a.scenes) {
+      for (const l of s.lines) lineCount.set(l.character, (lineCount.get(l.character) ?? 0) + 1)
+    }
+  }
+  const speakerForCast = new Map<string, string>()
+  for (const exact of [true, false]) {
+    for (const key of firstSeen) {
+      const ck = castKeyFor(key)
+      if (ck && (ck === key) === exact && !speakerForCast.has(ck)) speakerForCast.set(ck, key)
+    }
+  }
+  const entries: { key: string; castKey: string | null }[] = [...cast.keys()].map((ck) => ({
+    key: speakerForCast.get(ck) ?? ck,
+    castKey: ck,
+  }))
+  const used = new Set(entries.map((e) => e.key))
+  // Hors distribution, seuls les noms qui ont au moins une réplique comptent (pas de « RIDEAU »)
+  for (const key of firstSeen) {
+    if (!used.has(key) && (lineCount.get(key) ?? 0) > 0) entries.push({ key, castKey: null })
+  }
+
+  const displayName = (key: string, castKey: string | null) => {
+    const castName = castKey ? cast.get(castKey)?.name : undefined
     const variants = spellings.get(key)
     if (!variants) return castName ?? key
     const best = [...variants.entries()].sort((a, b) => b[1] - a[1])[0][0]
     return castName && variants.has(castName) ? castName : best
   }
-  const keys = [...cast.keys(), ...firstSeen.filter((k) => !cast.has(k))]
-  const characters: ParsedCharacter[] = keys.map((key) => {
-    const description = cast.get(key)?.description ?? null
-    const name = displayName(key)
+  const characters: ParsedCharacter[] = entries.map(({ key, castKey }) => {
+    const description = castKey ? cast.get(castKey)?.description ?? null : null
+    const name = displayName(key, castKey)
     return { name, description, gender: guessGender(name, description) }
   })
-  const nameByKey = new Map(keys.map((k, i) => [k, characters[i].name]))
+  const nameByKey = new Map(entries.map((e, i) => [e.key, characters[i].name]))
   for (const a of acts) {
     for (const s of a.scenes) {
       for (const l of s.lines) l.character = nameByKey.get(l.character) ?? l.character

@@ -12,17 +12,19 @@ export async function fetchGoogleDocHtml(docId: string): Promise<string> {
     ? await fetch(`/gdoc-proxy/document/d/${docId}/export?format=html`)
     : await fetch(`${functionUrl('fetch-gdoc')}?id=${encodeURIComponent(docId)}`, { headers: functionHeaders() })
 
-  const contentType = res.headers.get('content-type') ?? ''
-  if (!res.ok || !contentType.includes('text/html')) {
-    let message = 'Impossible de récupérer le document.'
+  const sharingHint = 'Vérifiez qu’il est partagé à « Tous les utilisateurs disposant du lien ».'
+  if (!res.ok) {
+    let message = `Impossible de récupérer le document. ${sharingHint}`
     try {
       message = (await res.json()).error ?? message
     } catch {
       // réponse non JSON
     }
-    throw new Error(`${message} Vérifiez qu’il est partagé à « Tous les utilisateurs disposant du lien ».`)
+    throw new Error(message)
   }
+  // Pas de contrôle du Content-Type : Supabase sert les réponses HTML des fonctions en text/plain
   const html = await res.text()
+  if (!/<html[\s>]/i.test(html)) throw new Error(`Réponse inattendue : ce n’est pas un document Google Docs. ${sharingHint}`)
   if (html.includes('accounts.google.com/ServiceLogin') || html.includes('id="identifierId"')) {
     throw new Error('Document privé : partagez-le à « Tous les utilisateurs disposant du lien ».')
   }
