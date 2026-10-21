@@ -71,7 +71,10 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
           setPhase('listening')
           setTranscript('')
           setRatio(0)
-          await listener.current?.waitForLine(line.text, signal, (heard, r) => {
+          // Le micro, ouvert en continu, a pu capter la réplique que la synthèse vient de lire
+          const before = lines[i - 1]
+          const previous = before && before.character_id !== myRoleId ? before.text : null
+          await listener.current?.waitForLine(line.text, previous, signal, (heard, r) => {
             setTranscript(heard)
             setRatio(r)
           })

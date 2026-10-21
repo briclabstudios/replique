@@ -3,7 +3,7 @@
 // jusqu'à une seconde, et les premiers mots d'une réplique seraient perdus. Seul ce qui est
 // entendu pendant mon tour compte.
 
-import { coverage, endReached } from './match'
+import { coverage, endReached, isEchoOf } from './match'
 
 /* Types minimaux : l'API n'est pas dans les définitions DOM standard */
 interface RecognitionResult {
@@ -39,6 +39,8 @@ export type MicState = 'off' | 'starting' | 'ready' | 'unavailable'
 
 interface Turn {
   expected: string
+  /** Réplique lue juste avant par la synthèse vocale : son écho dans le micro est ignoré. */
+  previous: string | null
   /** Nombre de résultats définitifs déjà reçus au début du tour : ils ne comptent pas. */
   firstFinal: number
   onProgress?: (transcript: string, ratio: number) => void
@@ -58,7 +60,8 @@ export class SceneListener {
   private recognition: Recognition | null = null
   private active = false
   private finals: string[] = []
-  private interim = ''
+  /** Résultats provisoires en cours, un par segment reconnu. */
+  private interim: string[] = []
   private turn: Turn | null = null
   private quickRestarts = 0
   private lastStart = 0
@@ -99,7 +102,12 @@ export class SceneListener {
    * quand la fin est dite, après un silence si l'essentiel a été dit, ou à l'annulation.
    * Si le micro est indisponible, seule l'annulation (bouton « Suivant ») la résout.
    */
-  waitForLine(expected: string, signal: AbortSignal, onProgress?: Turn['onProgress']): Promise<void> {
+  waitForLine(
+    expected: string,
+    previous: string | null,
+    signal: AbortSignal,
+    onProgress?: Turn['onProgress'],
+  ): Promise<void> {
     this.endTurn()
     return new Promise<void>((resolve) => {
       if (signal.aborted) return resolve()
@@ -109,7 +117,7 @@ export class SceneListener {
         resolve()
       }
       // Le résultat en cours au début du tour peut déjà contenir mes premiers mots : il est gardé
-      const turn: Turn = { expected, firstFinal: this.finals.length, onProgress, done }
+      const turn: Turn = { expected, previous, firstFinal: this.finals.length, onProgress, done }
       this.turn = turn
       signal.addEventListener('abort', done)
     })
@@ -140,7 +148,7 @@ export class SceneListener {
 
     const recognition = new Ctor()
     this.recognition = recognition
-    this.interim = ''
+    this.interim = []
     recognition.lang = 'fr-FR'
     recognition.continuous = true
     recognition.interimResults = true
@@ -151,11 +159,11 @@ export class SceneListener {
     }
     recognition.onresult = (e) => {
       if (this.recognition !== recognition) return
-      let interim = ''
+      const interim: string[] = []
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i]
         if (r.isFinal) this.finals.push(r[0].transcript)
-        else interim += ` ${r[0].transcript}`
+        else interim.push(r[0].transcript)
       }
       this.interim = interim
       this.check()
@@ -168,7 +176,7 @@ export class SceneListener {
     // Les navigateurs arrêtent l'écoute après un long silence : on relance
     recognition.onend = () => {
       if (this.recognition !== recognition) return
-      this.interim = ''
+      this.interim = []
       if (this.active) setTimeout(() => this.launch(), 150)
     }
 
@@ -179,8 +187,12 @@ export class SceneListener {
     }
   }
 
+  /** Ce que j'ai dit pendant mon tour, sans l'écho de la réplique précédente. */
   private heardThisTurn(turn: Turn): string {
-    return `${this.finals.slice(turn.firstFinal).join(' ')} ${this.interim}`.trim()
+    return [...this.finals.slice(turn.firstFinal), ...this.interim]
+      .filter((segment) => !(turn.previous && isEchoOf(turn.previous, segment)))
+      .join(' ')
+      .trim()
   }
 
   private check() {
