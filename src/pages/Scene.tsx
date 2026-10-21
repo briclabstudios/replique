@@ -88,7 +88,10 @@ function Player({ playId, sceneId, lines, characters, myRoleId, nextSceneId }: P
               )}
               {mine && state === 'current' && r.phase === 'listening' && (
                 <div className="listening" aria-live="polite">
-                  <Mic size={16} aria-hidden className="pulse" />
+                  <span className={`mic-label ${r.micState}`}>
+                    <Mic size={16} aria-hidden className="pulse" />
+                    {r.micState === 'ready' ? 'Parlez !' : r.micState === 'starting' ? 'Activation du micro…' : ''}
+                  </span>
                   <div className="meter"><span style={{ width: `${Math.round(r.ratio * 100)}%` }} /></div>
                   {r.transcript && <span className="muted small transcript">{r.transcript}</span>}
                 </div>
@@ -115,6 +118,15 @@ function Player({ playId, sceneId, lines, characters, myRoleId, nextSceneId }: P
       )}
 
       <nav className="controls" aria-label="Contrôles de la répétition">
+        {(r.micState === 'starting' || r.micState === 'ready') && (
+          <span
+            className={`mic-status ${r.micState}`}
+            role="status"
+            title={r.micState === 'ready' ? 'Micro prêt' : 'Activation du micro…'}
+          >
+            <Mic size={18} aria-label={r.micState === 'ready' ? 'Micro prêt' : 'Activation du micro'} />
+          </span>
+        )}
         <button className="icon-button" onClick={r.restart} aria-label="Recommencer" title="Recommencer">
           <RotateCcw size={22} />
         </button>

@@ -9,6 +9,7 @@
   --accent-contrast: #fff;
   --gold: #b8892b;
   --danger: #b3261e;
+  --ok: #2e7d32;
   --current: #fff1cf;
   --radius: 14px;
   --shadow: 0 1px 2px rgb(42 26 31 / 0.06), 0 4px 16px rgb(42 26 31 / 0.06);
@@ -26,6 +27,7 @@
     --accent: #c94b5b;
     --gold: #e0b45a;
     --danger: #ff7a70;
+    --ok: #6fcf73;
     --current: #3d2a1a;
     --shadow: 0 4px 16px rgb(0 0 0 / 0.3);
     color-scheme: dark;
@@ -179,6 +181,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Accueil */
+.import { margin-top: 24px; }
 .import .row { margin-top: 8px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .tile { display: flex; flex-direction: column; gap: 6px; margin: 0; }
@@ -251,6 +254,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .meter { flex: 1; min-width: 80px; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
 .meter span { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }
 .transcript { flex-basis: 100%; }
+.mic-label { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.mic-label.ready { color: var(--ok); }
+.mic-label.starting { color: var(--gold); }
+.mic-status { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; }
+.mic-status.ready { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.mic-status.starting { color: var(--gold); animation: pulse 1.2s ease-in-out infinite; }
 .pulse { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.3; } }
 .done { text-align: center; margin-top: 16px; }
@@ -275,7 +284,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 
 .editing .line { cursor: default; }
 .editing textarea { margin-bottom: 0; }
-.saved { color: #2e7d32; }
+.saved { color: var(--ok); }
 
 /* Admin */
 .radio-group { border: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 10px; }

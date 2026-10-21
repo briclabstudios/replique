@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { listenForLine } from '../lib/speech/listener'
+import { SceneListener, type MicState } from '../lib/speech/listener'
 import { setSceneProgress } from '../lib/storage'
 import type { TtsEngine } from '../lib/tts'
 import type { Character, Line } from '../lib/types'
@@ -27,8 +27,11 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
   const [ratio, setRatio] = useState(0)
   const [micIssue, setMicIssue] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [micState, setMicState] = useState<MicState>('off')
   const controller = useRef<AbortController | null>(null)
   const indexRef = useRef(index)
+  const listener = useRef<SceneListener | null>(null)
+  if (!listener.current) listener.current = new SceneListener(setMicState, setMicIssue)
 
   const setIndex = useCallback(
     (i: number) => {
@@ -39,18 +42,24 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
     [playId, sceneId, lines.length],
   )
 
+  /** Interrompt la lecture en cours, micro compris. */
   const stop = useCallback(() => {
     controller.current?.abort()
     controller.current = null
+    listener.current?.stop()
   }, [])
 
   const run = useCallback(
     async (start: number) => {
-      stop()
+      // Un saut de réplique relance la lecture sans couper le micro, déjà prêt
+      controller.current?.abort()
       const ctrl = new AbortController()
       controller.current = ctrl
       const { signal } = ctrl
       setError(null)
+
+      // Micro ouvert dès le début, pour ne pas perdre mes premiers mots
+      if (lines.slice(start).some((l) => l.character_id === myRoleId)) listener.current?.start()
 
       for (let i = start; i < lines.length; i++) {
         if (signal.aborted) return
@@ -62,13 +71,9 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
           setPhase('listening')
           setTranscript('')
           setRatio(0)
-          await listenForLine(line.text, {
-            signal,
-            onProgress: (heard, r) => {
-              setTranscript(heard)
-              setRatio(r)
-            },
-            onUnavailable: setMicIssue,
+          await listener.current?.waitForLine(line.text, signal, (heard, r) => {
+            setTranscript(heard)
+            setRatio(r)
           })
         } else if (character) {
           setPhase('speaking')
@@ -81,14 +86,14 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
             if (signal.aborted) return
             setError(e instanceof Error ? e.message : String(e))
             setPhase('paused')
-            controller.current = null
+            stop()
             return
           }
         }
       }
 
       if (signal.aborted) return
-      controller.current = null
+      stop()
       setIndex(lines.length)
       setPhase('done')
     },
@@ -125,12 +130,12 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
   // Arrêt propre en quittant la page ou quand le texte / le rôle change
   useEffect(
     () => () => {
-      if (!controller.current) return
+      const running = controller.current !== null
       stop()
-      setPhase('paused')
+      if (running) setPhase('paused')
     },
     [stop, lines, myRoleId],
   )
 
-  return { index, phase, transcript, ratio, micIssue, error, play, pause, restart, goTo, next, stop }
+  return { index, phase, transcript, ratio, micState, micIssue, error, play, pause, restart, goTo, next, stop }
 }
