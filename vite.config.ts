@@ -16,6 +16,9 @@ export default defineConfig({
         short_name: 'Réplique',
         description: 'Apprenez votre texte : les voix IA jouent vos partenaires, vous dites vos répliques.',
         lang: 'fr',
+        // Identité fixe de l'appli installée ; différente de l'ancienne (dérivée de start_url) pour que Chrome
+        // Android oublie une installation fantôme (« déjà installée » mais « impossible d'ouvrir »)
+        id: 'replique',
         start_url: './',
         scope: './',
         display: 'standalone',
