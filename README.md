@@ -57,6 +57,13 @@ n'est nécessaire qu'en production.
 - **Mon rôle** et la **progression** (« En cours ») sont propres à chaque appareil (`localStorage`).
 - Il n'y a pas de comptes : quiconque a l'URL de l'app peut modifier les pièces.
 
+## Statistiques
+
+Chaque ouverture de l'app (nouvelle session après 30 min) ajoute une ligne dans la table `visits` :
+identifiant aléatoire de l'appareil, fuseau horaire, langue, type d'appareil, système, navigateur,
+appli installée ou non. Aucune adresse IP n'est stockée. Le tableau de bord est à l'adresse
+`…/#/dashboard`, sans lien dans l'app ; il lit des agrégats via la fonction `visit_stats`.
+
 ## Scripts
 
 | Commande | Rôle |

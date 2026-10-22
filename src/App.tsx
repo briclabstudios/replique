@@ -8,6 +8,7 @@ import Characters from './pages/Characters'
 import Summary from './pages/Summary'
 import ScenePage from './pages/Scene'
 import Admin from './pages/Admin'
+import Dashboard from './pages/Dashboard'
 
 function MissingConfig() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/pieces/:playId/personnages" element={<Characters />} />
           <Route path="/pieces/:playId/scenes/:sceneId" element={<ScenePage />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </SettingsProvider>
     </HashRouter>
