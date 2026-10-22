@@ -93,10 +93,17 @@ function ImportForm() {
       <h2>
         <FileText size={20} aria-hidden /> Importer une pièce
       </h2>
-      <p className="muted">
-        Collez le lien d’un Google Doc partagé à « Tous les utilisateurs disposant du lien ». Noms des personnages en
-        MAJUSCULES, didascalies en italique.
-      </p>
+      <div className="muted">
+        <p>Collez le lien d’un Google Doc partagé à « Tous les utilisateurs disposant du lien ».</p>
+        <p>
+          <span className="app-name">Réplique</span> importera le texte, analysera les différents personnages, et fera le découpage par actes et scènes.
+        </p>
+        <p>Règles à respecter dans le texte source :</p>
+        <ul>
+          <li>noms des personnages en MAJUSCULES en début de réplique</li>
+          <li>didascalies en italique</li>
+        </ul>
+      </div>
       <div className="row">
         <input
           type="url"

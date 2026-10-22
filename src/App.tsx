@@ -41,7 +41,7 @@ function TopBar() {
     <header ref={ref} className="topbar">
       <Link to="/" className="brand">
         <Drama size={24} aria-hidden />
-        <span>Réplique</span>
+        <span className="app-name">Réplique</span>
       </Link>
       <Link to="/admin" className="icon-button" aria-label="Administration" title="Administration">
         <Settings size={20} />
