@@ -62,6 +62,20 @@ export async function getStructure(playId: string): Promise<{ acts: Act[]; scene
   return { acts: check(acts), scenes: check(scenes) }
 }
 
+/** Personnages qui parlent dans chaque scène, par ordre de première réplique. */
+export async function getSceneCasts(playId: string): Promise<Map<string, string[]>> {
+  const rows: { id: string; lines: { character_id: string | null }[] }[] = check(
+    await supabase
+      .from('scenes')
+      .select('id, lines(character_id, position)')
+      .eq('play_id', playId)
+      .order('position', { referencedTable: 'lines' }),
+  )
+  return new Map(
+    rows.map((s) => [s.id, [...new Set(s.lines.map((l) => l.character_id).filter((id): id is string => !!id))]]),
+  )
+}
+
 export async function getScene(sceneId: string): Promise<{ scene: Scene; act: Act; lines: Line[] }> {
   const scene: Scene = check(await supabase.from('scenes').select('*').eq('id', sceneId).single())
   const [act, lines] = await Promise.all([

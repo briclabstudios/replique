@@ -1,19 +1,24 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Play as PlayIcon, Users } from 'lucide-react'
-import { getPlay, getStructure } from '../lib/api'
+import { getCharacters, getPlay, getSceneCasts, getStructure } from '../lib/api'
 import { toRoman } from '../lib/format'
+import { getMyRole } from '../lib/storage'
 import { useLoader } from '../hooks/useLoader'
 
 export default function Summary() {
   const { playId = '' } = useParams()
   const play = useLoader(() => getPlay(playId), [playId])
   const structure = useLoader(() => getStructure(playId), [playId])
+  const characters = useLoader(() => getCharacters(playId), [playId])
+  const casts = useLoader(() => getSceneCasts(playId), [playId])
 
   const error = play.error ?? structure.error
   if (error) return <main className="container"><p className="error">{error}</p></main>
   if (!play.data || !structure.data) return <main className="container"><p className="muted">Chargement…</p></main>
 
   const { acts, scenes } = structure.data
+  const names = new Map(characters.data?.map((c) => [c.id, c.name]))
+  const myRoleId = getMyRole(playId)
 
   return (
     <main className="container">
@@ -42,10 +47,19 @@ export default function Summary() {
               .map((scene) => (
                 <li key={scene.id} className="scene-row">
                   <Link to={`/pieces/${playId}/scenes/${scene.id}`} className="scene-link">
-                    <span>
+                    <div>
                       <strong>Scène {scene.number}</strong>
                       {scene.title && <span className="muted"> — {scene.title}</span>}
-                    </span>
+                      {casts.data?.get(scene.id)?.length ? (
+                        <ul className="chips" aria-label="Personnages de la scène">
+                          {casts.data.get(scene.id)!.map((id) => (
+                            <li key={id} className={id === myRoleId ? 'chip chip-mine' : 'chip'}>
+                              {names.get(id) ?? '?'}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
                   </Link>
                   <Link
                     to={`/pieces/${playId}/scenes/${scene.id}`}
