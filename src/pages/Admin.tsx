@@ -1,68 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Check, Lock, Mic, MicOff, Volume2 } from 'lucide-react'
+import { ArrowLeft, Check, Mic, MicOff, Volume2 } from 'lucide-react'
 import { saveTtsSettings } from '../lib/api'
 import { createEngine } from '../lib/tts'
 import { frenchVoices, TONES, voiceGender, voicesReady } from '../lib/tts/voices'
 import { isRecognitionSupported } from '../lib/speech/listener'
+import PasswordDialog from '../components/PasswordDialog'
 import { useSettings } from '../context/SettingsContext'
 import type { Character, Gender, TtsSettings } from '../lib/types'
 
 const GENDER_LABEL: Record<Gender, string> = { male: 'masculine', female: 'féminine', neutral: 'indéterminée' }
-
-// Simple garde-fou pour éviter un passage involontaire au mode payant : il est visible dans le code publié
-const OPENAI_PASSWORD = '654321'
-
-function PasswordDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const [password, setPassword] = useState('')
-  const [wrong, setWrong] = useState(false)
-
-  useEffect(() => {
-    ref.current?.showModal()
-  }, [])
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (password === OPENAI_PASSWORD) onConfirm()
-    else {
-      setWrong(true)
-      setPassword('')
-    }
-  }
-
-  return (
-    // Échap ferme la fenêtre : on l'interprète comme une annulation
-    <dialog ref={ref} className="modal" onCancel={onCancel} aria-labelledby="openai-password-title">
-      <form onSubmit={submit}>
-        <h2 id="openai-password-title">
-          <Lock size={18} aria-hidden /> Activer OpenAI TTS
-        </h2>
-        <p className="muted">Les voix OpenAI sont payantes. Saisissez le mot de passe pour les activer.</p>
-        <input
-          type="password"
-          autoFocus
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value)
-            setWrong(false)
-          }}
-          aria-label="Mot de passe"
-          aria-invalid={wrong}
-        />
-        {wrong && <p className="error">Mot de passe incorrect.</p>}
-        <div className="row modal-actions">
-          <button type="button" className="button" onClick={onCancel}>
-            Annuler
-          </button>
-          <button type="submit" className="button primary" disabled={!password}>
-            Valider
-          </button>
-        </div>
-      </form>
-    </dialog>
-  )
-}
 
 function sampleCharacter(gender: Gender, tone: string): Character {
   return {
@@ -115,6 +62,8 @@ export default function Admin() {
       <h1 className="section-title">Administration</h1>
       {askPassword && (
         <PasswordDialog
+          title="Activer OpenAI TTS"
+          message="Les voix OpenAI sont payantes. Saisissez le mot de passe pour les activer."
           onConfirm={() => {
             setDraft({ ...draft, provider: 'openai' })
             setAskPassword(false)

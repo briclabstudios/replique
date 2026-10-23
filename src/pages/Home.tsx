@@ -7,6 +7,7 @@ import { fetchGoogleDocHtml, googleDocId } from '../lib/parser/gdoc'
 import { parsePlay } from '../lib/parser/parsePlay'
 import { clearPlayData, getMyRole } from '../lib/storage'
 import { plural } from '../lib/format'
+import PasswordDialog from '../components/PasswordDialog'
 import { useLoader } from '../hooks/useLoader'
 
 const MAX_CHIPS = 8
@@ -127,8 +128,10 @@ function ImportForm() {
 export default function Home() {
   const { data: plays, error, loading, reload } = useLoader(listPlays, [])
 
+  const [toDelete, setToDelete] = useState<PlaySummary | null>(null)
+
   const remove = async (play: PlaySummary) => {
-    if (!confirm(`Supprimer « ${play.title} » pour tout le monde ? Cette action est définitive.`)) return
+    setToDelete(null)
     await deletePlay(play.id)
     clearPlayData(play.id)
     reload()
@@ -141,8 +144,18 @@ export default function Home() {
       {error && <p className="error">{error}</p>}
       {plays?.length === 0 && <p className="muted">Aucune pièce pour l’instant : importez votre premier texte ci-dessous.</p>}
       <div className="grid">
-        {plays?.map((play) => <PlayTile key={play.id} play={play} onDelete={() => remove(play)} />)}
+        {plays?.map((play) => <PlayTile key={play.id} play={play} onDelete={() => setToDelete(play)} />)}
       </div>
+      {toDelete && (
+        <PasswordDialog
+          title={`Supprimer « ${toDelete.title} »`}
+          message="Cette pièce sera supprimée pour tout le monde, de façon définitive. Saisissez le mot de passe pour confirmer."
+          confirmLabel="Supprimer"
+          danger
+          onConfirm={() => remove(toDelete)}
+          onCancel={() => setToDelete(null)}
+        />
+      )}
       <ImportForm />
     </main>
   )
