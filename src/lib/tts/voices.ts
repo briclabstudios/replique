@@ -35,6 +35,7 @@ export function openAiVoice(character: Pick<Character, 'gender' | 'position'>): 
 export function openAiInstructions(character: Pick<Character, 'name' | 'tone' | 'personality' | 'description'>): string {
   const parts = [
     'Tu joues un rôle dans une pièce de théâtre, en français. Dis le texte exactement, avec le jeu d’un comédien.',
+    'Voix française, avec accent français.',
     `Personnage : ${character.name}.`,
     character.description ? `Rôle : ${character.description}` : '',
     character.personality ? `Personnalité : ${character.personality}` : '',

@@ -19,7 +19,7 @@ function sampleCharacter(gender: Gender, tone: string): Character {
 }
 
 export default function Admin() {
-  const { tts, reload } = useSettings()
+  const { tts, mySpeed, reload } = useSettings()
   const [draft, setDraft] = useState<TtsSettings>(tts)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export default function Admin() {
   const test = async () => {
     setError(null)
     try {
-      await createEngine(draft).speak(testText, sampleCharacter(testGender, testTone), new AbortController().signal)
+      await createEngine({ ...draft, speed: mySpeed }).speak(testText, sampleCharacter(testGender, testTone), new AbortController().signal)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -109,20 +109,6 @@ export default function Admin() {
             <input value={draft.openaiModel} onChange={(e) => setDraft({ ...draft, openaiModel: e.target.value })} />
           </label>
         )}
-        <label className="field">
-          <span>
-            Débit de parole : <strong>×{draft.speed.toFixed(2)}</strong>
-          </span>
-          <input
-            type="range"
-            min={0.75}
-            max={2}
-            step={0.05}
-            value={draft.speed}
-            onChange={(e) => setDraft({ ...draft, speed: Number(e.target.value) })}
-          />
-          <span className="muted small">S’applique à toutes les voix ; le ton de chaque personnage reste plus ou moins rapide.</span>
-        </label>
         <button className="button primary" onClick={save}>
           <Check size={16} aria-hidden /> Enregistrer
         </button>

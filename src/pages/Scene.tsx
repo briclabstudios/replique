@@ -155,6 +155,25 @@ function Player({ playId, sceneId, lines, characters, myRoleId, nextSceneId }: P
   )
 }
 
+function SpeedControl() {
+  const { mySpeed, setMySpeed } = useSettings()
+  return (
+    <label className="speed-control">
+      <span className="muted small">
+        Débit de lecture :<strong>×{mySpeed.toFixed(2)}</strong>
+      </span>
+      <input
+        type="range"
+        min={0.6}
+        max={1.6}
+        step={0.05}
+        value={mySpeed}
+        onChange={(e) => setMySpeed(Number(e.target.value))}
+      />
+    </label>
+  )
+}
+
 function Editor({ playId, sceneId, lines, characters, onLinesChange }: {
   playId: string
   sceneId: string
@@ -282,6 +301,7 @@ export default function ScenePage() {
       <Link to={`/pieces/${playId}`} className="back">
         <ArrowLeft size={16} aria-hidden /> Retour au sommaire de la pièce
       </Link>
+      <div className="scene-sticky">
       <section className="card scene-head">
         <div>
           {play.data && <p className="play-title">{play.data.title}</p>}
@@ -309,6 +329,8 @@ export default function ScenePage() {
           </button>
         </div>
       </section>
+      {!editing && <SpeedControl />}
+      </div>
 
       {!editing && !myRoleName && (
         <p className="notice">

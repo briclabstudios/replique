@@ -31,6 +31,9 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
   const controller = useRef<AbortController | null>(null)
   const indexRef = useRef(index)
   const listener = useRef<SceneListener | null>(null)
+  // La boucle de lecture dure toute la scène : elle relit le moteur à chaque réplique (réglage de débit modifié en cours de route)
+  const engineRef = useRef(engine)
+  engineRef.current = engine
   if (!listener.current) listener.current = new SceneListener(setMicState, setMicIssue)
 
   const setIndex = useCallback(
@@ -82,9 +85,9 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
           setPhase('speaking')
           const next = lines.slice(i + 1).find((l) => l.character_id !== myRoleId)
           const nextCharacter = next && characters.get(next.character_id)
-          if (next && nextCharacter) engine.prefetch?.(next.text, nextCharacter)
+          if (next && nextCharacter) engineRef.current.prefetch?.(next.text, nextCharacter)
           try {
-            await engine.speak(line.text, character, signal)
+            await engineRef.current.speak(line.text, character, signal)
           } catch (e) {
             if (signal.aborted) return
             setError(e instanceof Error ? e.message : String(e))
@@ -100,7 +103,7 @@ export function useRehearsal({ playId, sceneId, lines, characters, myRoleId, eng
       setIndex(lines.length)
       setPhase('done')
     },
-    [characters, engine, lines, myRoleId, setIndex, stop],
+    [characters, lines, myRoleId, setIndex, stop],
   )
 
   const play = useCallback(() => {
