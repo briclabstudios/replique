@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Loader2, Play as PlayIcon, Trash2, UserCheck } from 'lucide-react'
+import { FileText, FileUp, Loader2, Play as PlayIcon, Trash2, UserCheck } from 'lucide-react'
 import { deletePlay, importPlay, listPlays, type PlaySummary } from '../lib/api'
 import { extractParagraphs } from '../lib/parser/html'
+import { extractPdfParagraphs } from '../lib/parser/pdf'
 import { fetchGoogleDocHtml, googleDocId } from '../lib/parser/gdoc'
-import { parsePlay } from '../lib/parser/parsePlay'
+import { parsePlay, type ParsedPlay } from '../lib/parser/parsePlay'
 import { clearPlayData, getMyRole } from '../lib/storage'
 import { plural } from '../lib/format'
 import PasswordDialog from '../components/PasswordDialog'
@@ -61,6 +62,37 @@ function ImportForm() {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pdfInput = useRef<HTMLInputElement>(null)
+
+  const fail = (err: unknown) => {
+    setError(err instanceof Error ? err.message : String(err))
+    setStatus(null)
+  }
+
+  const save = async (parsed: ParsedPlay, source: string) => {
+    const lineCount = parsed.acts.reduce((n, a) => n + a.scenes.reduce((m, s) => m + s.lines.length, 0), 0)
+    if (lineCount === 0) {
+      throw new Error('Aucune réplique trouvée : les noms des personnages doivent être en MAJUSCULES en début de ligne.')
+    }
+    setStatus('Enregistrement…')
+    const playId = await importPlay(parsed, source)
+    navigate(`/pieces/${playId}/personnages`)
+  }
+
+  const submitPdf = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError(null)
+    try {
+      setStatus('Lecture du PDF…')
+      const { title, paragraphs } = await extractPdfParagraphs(file)
+      setStatus('Analyse du texte…')
+      await save(parsePlay(paragraphs, title), file.name)
+    } catch (err) {
+      fail(err)
+    }
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -75,53 +107,59 @@ function ImportForm() {
       const html = await fetchGoogleDocHtml(docId)
       setStatus('Analyse du texte…')
       const { title, paragraphs } = extractParagraphs(html)
-      const parsed = parsePlay(paragraphs, title)
-      const lineCount = parsed.acts.reduce((n, a) => n + a.scenes.reduce((m, s) => m + s.lines.length, 0), 0)
-      if (lineCount === 0) {
-        throw new Error('Aucune réplique trouvée : les noms des personnages doivent être en MAJUSCULES en début de ligne.')
-      }
-      setStatus('Enregistrement…')
-      const playId = await importPlay(parsed, url.trim())
-      navigate(`/pieces/${playId}/personnages`)
+      await save(parsePlay(paragraphs, title), url.trim())
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-      setStatus(null)
+      fail(err)
     }
   }
 
   return (
-    <form className="card import" onSubmit={submit}>
+    <section className="card import">
       <h2>
         <FileText size={20} aria-hidden /> Importer une pièce
       </h2>
-      <div className="muted">
-        <p>Collez le lien d’un Google Doc partagé à « Tous les utilisateurs disposant du lien ».</p>
-        <p>
-          <span className="app-name">Réplique</span> importera le texte, analysera les différents personnages, et fera le découpage par actes et scènes.
-        </p>
-        <p>Règles à respecter dans le texte source :</p>
+      <p className="muted">
+        <span className="app-name">Réplique</span> importera le texte, analysera les différents personnages, et fera le découpage par actes et scènes.
+      </p>
+      <ul className="import-methods">
+        <li>
+          <p>à partir d’un fichier PDF</p>
+          <div className="row">
+            <input ref={pdfInput} type="file" accept="application/pdf,.pdf" hidden onChange={submitPdf} aria-label="Fichier PDF" />
+            <button type="button" className="button primary" disabled={status !== null} onClick={() => pdfInput.current?.click()}>
+              {status ? <Loader2 size={18} className="spin" aria-hidden /> : <FileUp size={18} aria-hidden />} Importer un PDF
+            </button>
+          </div>
+        </li>
+        <li>
+          <p>à partir d’un lien Google Doc partagé à « Tous les utilisateurs disposant du lien »</p>
+          <form className="row" onSubmit={submit}>
+            <input
+              type="url"
+              required
+              placeholder="https://docs.google.com/document/d/…"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={status !== null}
+              aria-label="Lien Google Docs"
+            />
+            <button className="button primary" disabled={status !== null}>
+              Importer
+            </button>
+          </form>
+        </li>
+      </ul>
+      {status && <p className="muted">{status}</p>}
+      {error && <p className="error">{error}</p>}
+      <div className="muted import-rules">
+        <p>Prérequis du fichier source :</p>
         <ul>
           <li>noms des personnages en MAJUSCULES en début de réplique</li>
           <li>didascalies en italique</li>
+          <li>PDF : texte sélectionnable (pas un scan)</li>
         </ul>
       </div>
-      <div className="row">
-        <input
-          type="url"
-          required
-          placeholder="https://docs.google.com/document/d/…"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          disabled={status !== null}
-          aria-label="Lien Google Docs"
-        />
-        <button className="button primary" disabled={status !== null}>
-          {status ? <Loader2 size={18} className="spin" aria-hidden /> : null} Importer
-        </button>
-      </div>
-      {status && <p className="muted">{status}</p>}
-      {error && <p className="error">{error}</p>}
-    </form>
+    </section>
   )
 }
 
