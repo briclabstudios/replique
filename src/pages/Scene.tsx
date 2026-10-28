@@ -174,15 +174,24 @@ function SpeedControl() {
   )
 }
 
-function Editor({ playId, sceneId, lines, characters, onLinesChange }: {
+function Editor({ playId, sceneId, lines, characters, onLinesChange, focusId, onFocusLine }: {
   playId: string
   sceneId: string
   lines: Line[]
   characters: Character[]
   onLinesChange: (lines: Line[]) => void
+  focusId: string | null
+  onFocusLine: (id: string) => void
 }) {
   const [saved, setSaved] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const refs = useRef<Record<string, HTMLLIElement | null>>({})
+
+  // À l'ouverture, se placer sur la réplique qu'on lisait
+  useEffect(() => {
+    if (focusId) refs.current[focusId]?.scrollIntoView({ block: 'center' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const patch = (id: string, p: Partial<Line>) => onLinesChange(lines.map((l) => (l.id === id ? { ...l, ...p } : l)))
 
@@ -235,7 +244,14 @@ function Editor({ playId, sceneId, lines, characters, onLinesChange }: {
       )}
       <ol className="script editing">
         {lines.map((line, i) => (
-          <li key={line.id} className="line">
+          <li
+            key={line.id}
+            ref={(el) => {
+              refs.current[line.id] = el
+            }}
+            className="line"
+            onFocus={() => onFocusLine(line.id)}
+          >
             <div className="row">
               <select
                 value={line.character_id}
@@ -280,6 +296,7 @@ export default function ScenePage() {
   // Le rôle se choisit sur l'écran Personnages ; ici il est seulement lu
   const [myRole] = useState(() => getMyRole(playId))
   const [editing, setEditing] = useState(false)
+  const [focusId, setFocusId] = useState<string | null>(null)
 
   const byId = useMemo(() => new Map((characters.data ?? []).map((c) => [c.id, c as Character])), [characters.data])
   const nextSceneId = useMemo(() => {
@@ -320,8 +337,16 @@ export default function ScenePage() {
           <button
             className={editing ? 'button primary' : 'button'}
             onClick={() => {
-              // La position de lecture n'a plus de sens si le texte change
-              if (!editing) setSceneProgress(playId, sceneId, null)
+              if (!editing) {
+                // On ouvre l'édition à la réplique en cours de lecture
+                setFocusId(lines[getProgress(playId)[sceneId] ?? 0]?.id ?? null)
+                // La position de lecture n'a plus de sens si le texte change
+                setSceneProgress(playId, sceneId, null)
+              } else {
+                // On reprend la lecture à la dernière réplique éditée
+                const i = lines.findIndex((l) => l.id === focusId)
+                if (i >= 0) setSceneProgress(playId, sceneId, i)
+              }
               setEditing(!editing)
             }}
           >
@@ -341,7 +366,8 @@ export default function ScenePage() {
       {lines.length === 0 && <p className="muted">Cette scène ne contient aucune réplique.</p>}
 
       {editing ? (
-        <Editor playId={playId} sceneId={sceneId} lines={lines} characters={characters.data} onLinesChange={setLines} />
+        <Editor playId={playId} sceneId={sceneId} lines={lines} characters={characters.data} onLinesChange={setLines}
+          focusId={focusId} onFocusLine={setFocusId} />
       ) : (
         <Player
           key={`${sceneId}-${myRole}`}
