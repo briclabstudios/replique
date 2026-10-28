@@ -198,6 +198,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .tile-stats { font-size: 0.9rem; color: var(--gold); font-weight: 600; }
 .tile-role { display: flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; }
 .tile .button.primary { margin-top: auto; justify-content: center; }
+.play-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.play-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; }
+.play-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.play-row-main h2, .play-row-main p { margin: 0; }
+.play-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+@media (max-width: 560px) {
+  .play-row { flex-direction: column; align-items: stretch; }
+  .play-row-actions { justify-content: space-between; }
+}
 .chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 4px 0; list-style: none; }
 .chip { font-size: 0.75rem; background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
 .chip-mine { background: var(--accent); color: var(--accent-contrast); }

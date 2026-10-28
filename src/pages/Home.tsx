@@ -11,9 +11,7 @@ import { plural } from '../lib/format'
 import PasswordDialog from '../components/PasswordDialog'
 import { useLoader } from '../hooks/useLoader'
 
-const MAX_CHIPS = 8
-
-function PlayTile({ play, onDelete }: { play: PlaySummary; onDelete: () => void }) {
+function PlayRow({ play, onDelete }: { play: PlaySummary; onDelete: () => void }) {
   const navigate = useNavigate()
   const characters = [...play.characters].sort((a, b) => a.position - b.position)
   const myRoleId = getMyRole(play.id)
@@ -23,37 +21,29 @@ function PlayTile({ play, onDelete }: { play: PlaySummary; onDelete: () => void 
   const draft = play.status === 'draft'
 
   return (
-    <article className="card tile">
-      <div className="tile-head">
-        <div>
-          <h2>{play.title}</h2>
-          {play.author && <p className="muted">{play.author}</p>}
-        </div>
+    <li className="card play-row">
+      <div className="play-row-main">
+        <h2>{play.title}</h2>
+        {play.author && <p className="muted">{play.author}</p>}
+        <p className="tile-stats">
+          {plural(acts, 'acte')} · {plural(scenes, 'scène')} · {plural(characters.length, 'personnage')}
+        </p>
+        <p className="tile-role">
+          <UserCheck size={16} aria-hidden /> Mon rôle : <strong>{myRole?.name ?? 'non choisi'}</strong>
+        </p>
+      </div>
+      <div className="play-row-actions">
+        <button
+          className="button primary"
+          onClick={() => navigate(draft ? `/pieces/${play.id}/personnages` : `/pieces/${play.id}`)}
+        >
+          <PlayIcon size={18} aria-hidden /> {draft ? 'Confirmer les personnages' : 'Répéter'}
+        </button>
         <button className="icon-button danger" onClick={onDelete} aria-label={`Supprimer ${play.title}`} title="Supprimer">
           <Trash2 size={18} />
         </button>
       </div>
-      <p className="tile-stats">
-        {plural(acts, 'acte')} · {plural(scenes, 'scène')} · {plural(characters.length, 'personnage')}
-      </p>
-      <ul className="chips">
-        {characters.slice(0, MAX_CHIPS).map((c) => (
-          <li key={c.id} className={c.id === myRoleId ? 'chip chip-mine' : 'chip'}>
-            {c.name}
-          </li>
-        ))}
-        {characters.length > MAX_CHIPS && <li className="chip">+{characters.length - MAX_CHIPS}</li>}
-      </ul>
-      <p className="tile-role">
-        <UserCheck size={16} aria-hidden /> Mon rôle : <strong>{myRole?.name ?? 'non choisi'}</strong>
-      </p>
-      <button
-        className="button primary"
-        onClick={() => navigate(draft ? `/pieces/${play.id}/personnages` : `/pieces/${play.id}`)}
-      >
-        <PlayIcon size={18} aria-hidden /> {draft ? 'Confirmer les personnages' : 'Répéter cette pièce'}
-      </button>
-    </article>
+    </li>
   )
 }
 
@@ -181,9 +171,9 @@ export default function Home() {
       {loading && !plays && <p className="muted">Chargement…</p>}
       {error && <p className="error">{error}</p>}
       {plays?.length === 0 && <p className="muted">Aucune pièce pour l’instant : importez votre premier texte ci-dessous.</p>}
-      <div className="grid">
-        {plays?.map((play) => <PlayTile key={play.id} play={play} onDelete={() => setToDelete(play)} />)}
-      </div>
+      <ul className="play-list">
+        {plays?.map((play) => <PlayRow key={play.id} play={play} onDelete={() => setToDelete(play)} />)}
+      </ul>
       {toDelete && (
         <PasswordDialog
           title={`Supprimer « ${toDelete.title} »`}
