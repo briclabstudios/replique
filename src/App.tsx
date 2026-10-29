@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import { HashRouter, Link, Route, Routes } from 'react-router-dom'
-import { Drama, Settings } from 'lucide-react'
+import { Drama, Info } from 'lucide-react'
 import { SettingsProvider } from './context/SettingsContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import Home from './pages/Home'
@@ -9,6 +9,7 @@ import Summary from './pages/Summary'
 import ScenePage from './pages/Scene'
 import Admin from './pages/Admin'
 import Dashboard from './pages/Dashboard'
+import InfoPage from './pages/Info'
 
 function MissingConfig() {
   return (
@@ -44,8 +45,8 @@ function TopBar() {
         <Drama size={24} aria-hidden />
         <span className="app-name">Réplique</span>
       </Link>
-      <Link to="/admin" className="icon-button" aria-label="Administration" title="Administration">
-        <Settings size={20} />
+      <Link to="/infos" className="icon-button" aria-label="Informations" title="Informations">
+        <Info size={20} />
       </Link>
     </header>
   )
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/pieces/:playId" element={<Summary />} />
           <Route path="/pieces/:playId/personnages" element={<Characters />} />
           <Route path="/pieces/:playId/scenes/:sceneId" element={<ScenePage />} />
+          <Route path="/infos" element={<InfoPage />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
